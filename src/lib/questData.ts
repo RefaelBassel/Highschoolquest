@@ -1,4 +1,4 @@
-// Single source of truth for all 21 activities of the Shacharit Academy Quest.
+// Single source of truth for all 20 activities of the Shacharit Academy Quest.
 // Total XP = 1200. 4 stages.
 
 export type ActivityKind =
@@ -203,21 +203,22 @@ const stage2: Stage = {
     {
       id: "s2-ruach-split",
       stage: 2,
-      kind: "drag-drop",
+      kind: "sort-categories",
       title: "הפיצול הגדול",
-      xp: 50,
-      question: 'גררו לתיבת "רוח" את כל המקצועות שמתפצלים אליה משיעורי ה״רוח״ של החטיבה.',
-      targetLabel: "רוח",
-      items: [
-        { id: "tanach", label: 'תנ״ך', correct: true },
-        { id: "history", label: "היסטוריה", correct: true },
-        { id: "machshevet", label: "מחשבת", correct: true },
-        { id: "tushba", label: 'תושב״ע', correct: true },
-        { id: "math", label: "מתמטיקה", correct: false },
-        { id: "english", label: "אנגלית", correct: false },
-        { id: "bio", label: "ביולוגיה", correct: false },
+      xp: 100,
+      question: 'בתיכון, שיעורי החטיבה מתפצלים לשתי תיבות. גררו כל מקצוע לתיבה הנכונה.',
+      categories: [
+        { id: "ruach", label: "רוח", description: "הומניסטיקה כללית", color: "sky" },
+        { id: "kodesh", label: "בית מדרש קודש", description: "מקצועות הקודש", color: "violet" },
       ],
-      explanation: 'בתיכון, "רוח" של החטיבה מתפצלת לארבעה מקצועות נפרדים: תנ״ך, היסטוריה, מחשבת ותושב״ע.',
+      items: [
+        { id: "literature", label: "ספרות", categoryId: "ruach" },
+        { id: "history", label: "היסטוריה", categoryId: "ruach" },
+        { id: "civics", label: "אזרחות", categoryId: "ruach" },
+        { id: "tanach", label: 'תנ״ך', categoryId: "kodesh" },
+        { id: "tushba", label: 'תושב״ע', categoryId: "kodesh" },
+        { id: "machshevet", label: "מחשבת ישראל", categoryId: "kodesh" },
+      ],
     },
     {
       id: "s2-survival",
@@ -244,18 +245,6 @@ const stage2: Stage = {
       ],
       correctId: "b",
       explanation: "טיפ ממחזור א׳: בתיכון היחס בוגר יותר, אבל זה דורש ממך הרבה יותר ניהול עצמי ואחריות אישית.",
-    },
-    {
-      id: "s2-breath",
-      stage: 2,
-      kind: "hotspot",
-      title: "הפסקות ונשימה",
-      xp: 50,
-      question: 'לחצו על המשבצות שמייצגות זמן "נשימה" — הפסקות או פעילות חברתית/בית מדרש חברתי.',
-      // 5 days x 8 periods. We use a meaningful subset.
-      grid: buildScheduleGrid(),
-      correctCellIds: ["d1-p3", "d2-p3", "d3-p3", "d4-p3", "d5-p3", "d2-p7", "d4-p7"],
-      explanation: 'הפסקות אמצע יום ושעות בית מדרש חברתי הן הזמנים שבהם המוח נח, וזה קריטי לעמידה בעומס.',
     },
     {
       id: "s2-volunteering",
@@ -320,38 +309,62 @@ const stage3: Stage = {
         {
           id: "g-30",
           front: "30%",
-          back: 'הערכה חלופית — לא "כרטיס כניסה" אלא חלק בלתי נפרד מהציון הסופי. מבוצע ברוב המקצועות בכיתה י׳ דרך פרויקטים, עבודות או בחינות פנימיות.',
+          back: "30% מהציון הסופי, מבוסס פרויקטים והערכה פנימית — לא בחינה.",
           emoji: "📊",
         },
         {
           id: "g-magen",
-          front: "ציון הגשה (מגן)",
-          back: 'ציון בית-ספרי המהווה ~50% מהציון הסופי. נקבע ע״י המורה על סמך מבחנים, עבודות והשתתפות לאורך השנה. נועד לשקף את העבודה השוטפת ולהגן עליכם במקרה של כישלון בבחינה.',
+          front: "ציון מגן",
+          back: "הציון השנתי של המורה. בערך 50% מהציון הסופי בבגרות.",
           emoji: "🛡️",
         },
         {
           id: "g-yhl",
           front: 'יח״ל',
-          back: 'יחידות לימוד — המדד הכמותי של מקצועות הלימוד. לתעודת בגרות נדרשות לפחות 21 יח״ל. שיטת ה״לגו״: צוברים יחידות עד שיש מספיק חלקים נדרשים.',
+          back: 'יחידת לימוד. בגרות מלאה = לפחות 21 יח״ל מצטברות.',
           emoji: "🧱",
         },
         {
           id: "g-flexible",
           front: "בגרות גמישה",
-          back: "מודל היבחנות במקצועות הומניסטיקה (היסטוריה, ספרות וכו׳): 35% משימות מבוקרות, 30% הערכה פנימית, 35% בחינה חיצונית.",
+          back: "מודל הומניסטיקה: 35% משימות + 30% פנימי + 35% חיצוני.",
           emoji: "🌊",
+        },
+        {
+          id: "g-pbl",
+          front: "בגרות פרויקטלית (PBL)",
+          back: "המורה בוחר 40% מהחומר. במקום מבחן — פרויקטים ותוצרים.",
+          emoji: "🎯",
         },
         {
           id: "g-general",
           front: "השכלה כללית",
-          back: 'יחידות חובה (כמו "בית מדרש חברתי" שממשיך עד י״ב) שיש לסיים כדי להיות זכאים לתעודה. ללא קשר לגוף-נפש שמסתיים בי״ב.',
+          back: 'יחידות חובה כמו "בית מדרש חברתי" שמלוות אותך עד י״ב.',
           emoji: "📚",
         },
         {
           id: "g-controlled",
           front: "משימות מבוקרות",
-          back: "מטלות ממוחשבות המבוצעות בכיתה תחת השגחת המורה ונבדקות ע״י משרד החינוך. מהוות חלק מרכזי בציון הבגרות הגמישה — צבירת נקודות לאורך השנה במקום מבחן יחיד.",
+          back: "מטלות ממוחשבות בכיתה, נבדקות במשרד החינוך — חלק מרכזי בגמישה.",
           emoji: "💻",
+        },
+        {
+          id: "g-megama-chuts",
+          front: "מגמת חוץ",
+          back: "מגמה שלא בשחרית — אחרי הצהריים במוסד חיצוני (350 ₪/שנה).",
+          emoji: "🌐",
+        },
+        {
+          id: "g-hagbar",
+          front: "הגבר",
+          back: "תוספת 3 יח״ל פנימיות ייחודיות לשחרית — אחריות, מוסר ותיקון עולם.",
+          emoji: "✨",
+        },
+        {
+          id: "g-glishat-ruach",
+          front: "גלישת רוח",
+          back: "תוכנית ספרות דיגיטלית — לומדים בקצב אישי מול המחשב.",
+          emoji: "🌬️",
         },
       ],
     },
