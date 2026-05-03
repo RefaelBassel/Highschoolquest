@@ -11,14 +11,39 @@ export interface SessionExportRow {
   answers: Record<string, unknown>;
 }
 
+function normalizePrivateKey(raw: string): string {
+  let key = raw.trim();
+  // Strip wrapping quotes if the user pasted the JSON value with quotes.
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+  // Convert literal \n into real newlines (Vercel preserves backslash-n in env values).
+  key = key.replace(/\\n/g, "\n");
+  // Some platforms strip newlines entirely — restore them around the headers if so.
+  if (!key.includes("\n") && key.includes("-----BEGIN PRIVATE KEY-----")) {
+    key = key
+      .replace("-----BEGIN PRIVATE KEY-----", "-----BEGIN PRIVATE KEY-----\n")
+      .replace("-----END PRIVATE KEY-----", "\n-----END PRIVATE KEY-----")
+      .replace(/(.{64})/g, "$1\n")
+      .replace(/\n+/g, "\n");
+  }
+  // Ensure trailing newline (some libs require it).
+  if (!key.endsWith("\n")) key += "\n";
+  return key;
+}
+
 function getServiceAccountAuth() {
   const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
   const privateKeyRaw = process.env.GOOGLE_SHEETS_PRIVATE_KEY;
   if (!clientEmail || !privateKeyRaw) {
     throw new Error("GOOGLE_SHEETS_CLIENT_EMAIL or GOOGLE_SHEETS_PRIVATE_KEY missing");
   }
-  // Vercel stores newlines as \n; normalize.
-  const privateKey = privateKeyRaw.replace(/\\n/g, "\n");
+  const privateKey = normalizePrivateKey(privateKeyRaw);
+  if (!privateKey.includes("BEGIN PRIVATE KEY")) {
+    throw new Error(
+      "GOOGLE_SHEETS_PRIVATE_KEY does not look like a private key — make sure you pasted the value of the 'private_key' field from your Service Account JSON.",
+    );
+  }
   return new google.auth.JWT({
     email: clientEmail,
     key: privateKey,
