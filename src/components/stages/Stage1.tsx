@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuest } from "@/lib/quest-context";
 import { STAGES, type NarrativeCardActivity } from "@/lib/questData";
 import { StageHeader } from "../StageHeader";
@@ -12,19 +12,16 @@ export function Stage1({ onStageComplete }: { onStageComplete: () => void }) {
   const { session } = useQuest();
   const cards = stage.activities as NarrativeCardActivity[];
 
-  // Resume on first card not yet completed
+  // Resume on first card not yet completed; if all are done, jump to the "done" view.
   const initialIdx = (() => {
     const completed = session?.completedActivities ?? [];
     const firstUnfinished = cards.findIndex((c) => !completed.includes(c.id));
-    return firstUnfinished === -1 ? 0 : firstUnfinished;
+    return firstUnfinished === -1 ? cards.length : firstUnfinished;
   })();
 
   const [idx, setIdx] = useState(initialIdx);
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    if (idx >= cards.length) setDone(true);
-  }, [idx, cards.length]);
+  // Derive `done` from idx directly — no useEffect race.
+  const done = idx >= cards.length;
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
