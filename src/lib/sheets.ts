@@ -13,13 +13,10 @@ export interface SessionExportRow {
 
 function normalizePrivateKey(raw: string): string {
   let key = raw.trim();
-  // Strip wrapping quotes if the user pasted the JSON value with quotes.
   if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
     key = key.slice(1, -1);
   }
-  // Convert literal \n into real newlines (Vercel preserves backslash-n in env values).
   key = key.replace(/\\n/g, "\n");
-  // Some platforms strip newlines entirely — restore them around the headers if so.
   if (!key.includes("\n") && key.includes("-----BEGIN PRIVATE KEY-----")) {
     key = key
       .replace("-----BEGIN PRIVATE KEY-----", "-----BEGIN PRIVATE KEY-----\n")
@@ -27,23 +24,52 @@ function normalizePrivateKey(raw: string): string {
       .replace(/(.{64})/g, "$1\n")
       .replace(/\n+/g, "\n");
   }
-  // Ensure trailing newline (some libs require it).
   if (!key.endsWith("\n")) key += "\n";
   return key;
 }
 
-function getServiceAccountAuth() {
+function readCredentials(): { clientEmail: string; privateKey: string } {
+  // Preferred: paste the entire Service Account JSON file as a single env var.
+  const jsonRaw = process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON;
+  if (jsonRaw && jsonRaw.trim().length > 0) {
+    let parsed: { client_email?: string; private_key?: string };
+    try {
+      // Some platforms wrap the value in quotes.
+      const trimmed = jsonRaw.trim().replace(/^['"]|['"]$/g, "");
+      parsed = JSON.parse(trimmed);
+    } catch (e) {
+      throw new Error(
+        "GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON is not valid JSON. Paste the entire contents of the Service Account JSON file as the value (open it in Notepad, Ctrl+A, Ctrl+C).",
+      );
+    }
+    if (!parsed.client_email || !parsed.private_key) {
+      throw new Error("Service Account JSON missing client_email or private_key fields.");
+    }
+    return {
+      clientEmail: parsed.client_email,
+      privateKey: normalizePrivateKey(parsed.private_key),
+    };
+  }
+
+  // Backward-compatible: separate vars.
   const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
   const privateKeyRaw = process.env.GOOGLE_SHEETS_PRIVATE_KEY;
   if (!clientEmail || !privateKeyRaw) {
-    throw new Error("GOOGLE_SHEETS_CLIENT_EMAIL or GOOGLE_SHEETS_PRIVATE_KEY missing");
+    throw new Error(
+      "Missing Sheets credentials. Set GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON (preferred) or both GOOGLE_SHEETS_CLIENT_EMAIL and GOOGLE_SHEETS_PRIVATE_KEY.",
+    );
   }
   const privateKey = normalizePrivateKey(privateKeyRaw);
   if (!privateKey.includes("BEGIN PRIVATE KEY")) {
     throw new Error(
-      "GOOGLE_SHEETS_PRIVATE_KEY does not look like a private key — make sure you pasted the value of the 'private_key' field from your Service Account JSON.",
+      "GOOGLE_SHEETS_PRIVATE_KEY does not look like a private key. Easier alternative: paste the whole JSON file into GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON instead.",
     );
   }
+  return { clientEmail, privateKey };
+}
+
+function getServiceAccountAuth() {
+  const { clientEmail, privateKey } = readCredentials();
   return new google.auth.JWT({
     email: clientEmail,
     key: privateKey,
