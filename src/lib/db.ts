@@ -25,6 +25,11 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_class ON sessions(student_class);
 CREATE INDEX IF NOT EXISTS idx_sessions_completed ON sessions(completed_at);
+CREATE TABLE IF NOT EXISTS admin_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;
 
 let _initialized = false;

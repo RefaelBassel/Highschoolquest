@@ -25,6 +25,7 @@ export function AdminClient() {
   const [error, setError] = useState<string | null>(null);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [changeKeyOpen, setChangeKeyOpen] = useState(false);
 
   // Hydrate key from localStorage and try auto-login
   useEffect(() => {
@@ -107,6 +108,24 @@ export function AdminClient() {
     setSessions(null);
   }
 
+  async function changeKey(newKey: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await fetch("/api/admin/change-key", {
+        method: "POST",
+        headers: { "x-admin-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify({ newKey }),
+      });
+      const data = await res.json();
+      if (!res.ok) return { ok: false, error: data.error || "שגיאה" };
+      // Update localStorage + state with the new key so the user stays logged in.
+      setKey(newKey);
+      localStorage.setItem(ADMIN_KEY_STORAGE, newKey);
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "שגיאת רשת" };
+    }
+  }
+
   if (!authed) {
     return (
       <div className="min-h-screen grid place-items-center px-4">
@@ -157,6 +176,7 @@ export function AdminClient() {
           <button onClick={exportToSheets} disabled={exporting} className="btn-primary">
             {exporting ? "מייצא…" : "ייצוא ל-Google Sheets"}
           </button>
+          <button onClick={() => setChangeKeyOpen(true)} className="btn-ghost">🔑 החלפת מפתח</button>
           <button onClick={logout} className="btn-ghost">יציאה</button>
         </div>
       </header>
@@ -238,6 +258,151 @@ export function AdminClient() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {changeKeyOpen && (
+        <ChangeKeyDialog
+          onClose={() => setChangeKeyOpen(false)}
+          onSubmit={changeKey}
+        />
+      )}
+    </div>
+  );
+}
+
+function ChangeKeyDialog({
+  onClose,
+  onSubmit,
+}: {
+  onClose: () => void;
+  onSubmit: (newKey: string) => Promise<{ ok: boolean; error?: string }>;
+}) {
+  const [newKey, setNewKey] = useState("");
+  const [confirmKey, setConfirmKey] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  function generate() {
+    // Browser-safe random key (UUID-ish, base64url-flavored, ~22 chars).
+    const bytes = new Uint8Array(18);
+    crypto.getRandomValues(bytes);
+    const b64 = btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+    setNewKey(b64);
+    setConfirmKey(b64);
+    setError(null);
+  }
+
+  async function submit() {
+    setError(null);
+    if (newKey.length < 8) {
+      setError("המפתח החדש חייב להיות לפחות 8 תווים.");
+      return;
+    }
+    if (newKey !== confirmKey) {
+      setError("שני השדות לא זהים. בדקי אם יש רווח בקצה.");
+      return;
+    }
+    setSubmitting(true);
+    const res = await onSubmit(newKey);
+    setSubmitting(false);
+    if (!res.ok) {
+      setError(res.error || "שגיאה");
+      return;
+    }
+    setSuccess(true);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="glass-strong rounded-3xl p-7 max-w-md w-full">
+        <div className="flex items-start justify-between gap-4 mb-1">
+          <div>
+            <div className="text-3xl mb-1">🔑</div>
+            <h2 className="text-2xl font-display font-black">החלפת מפתח מורה</h2>
+          </div>
+          <button onClick={onClose} className="text-white/40 hover:text-white text-2xl leading-none">
+            ×
+          </button>
+        </div>
+
+        {success ? (
+          <div className="mt-4">
+            <div className="rounded-xl border border-emerald-300/40 bg-emerald-300/10 p-4 text-emerald-100 leading-relaxed">
+              ✓ המפתח הוחלף בהצלחה ונשמר במסד הנתונים.
+              <br />
+              <strong className="block mt-2">שמרי את המפתח החדש במקום בטוח עכשיו:</strong>
+              <code dir="ltr" className="block mt-2 font-mono text-sm bg-black/30 rounded-lg p-2 break-all">
+                {newKey}
+              </code>
+            </div>
+            <button onClick={onClose} className="btn-primary w-full mt-5">
+              סגור
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-white/60 mt-2 leading-relaxed">
+              המפתח החדש נשמר במסד הנתונים — לא ב-Vercel — וייכנס לתוקף תוך כ-30 שניות.
+              לא צריך redeploy.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              <label className="block">
+                <span className="block text-xs text-white/55 mb-1.5">מפתח חדש (8+ תווים)</span>
+                <input
+                  type="text"
+                  dir="ltr"
+                  value={newKey}
+                  onChange={(e) => setNewKey(e.target.value)}
+                  className="field font-mono"
+                  placeholder="הקלידי או צרי אקראי"
+                  autoFocus
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-xs text-white/55 mb-1.5">אישור (הקלידי שוב)</span>
+                <input
+                  type="text"
+                  dir="ltr"
+                  value={confirmKey}
+                  onChange={(e) => setConfirmKey(e.target.value)}
+                  className="field font-mono"
+                />
+              </label>
+            </div>
+
+            <button onClick={generate} className="text-xs text-emerald-300 hover:underline mt-3">
+              ↺ צרי מפתח אקראי בטוח
+            </button>
+
+            {error && (
+              <div className="mt-3 text-sm text-rose-300 bg-rose-400/10 border border-rose-400/30 rounded-xl px-3 py-2">
+                {error}
+              </div>
+            )}
+
+            <div className="mt-5 flex items-center gap-2">
+              <button onClick={onClose} className="btn-ghost flex-1">
+                ביטול
+              </button>
+              <button
+                onClick={submit}
+                disabled={submitting || !newKey || !confirmKey}
+                className="btn-primary flex-1"
+              >
+                {submitting ? "שומרת…" : "שמרי מפתח חדש"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
