@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌅 Shacharit Quest — עולים לשחרית
 
-## Getting Started
+קוויסט אינטראקטיבי לתלמידים שעולים לישיבת שחרית — 4 שלבים, 21 משימות, 1200 XP.
+מבוסס על המפרט הפדגוגי של בית הספר.
 
-First, run the development server:
+## ערימת טכנולוגיות
+
+- **Next.js 16** (App Router, React 19, Turbopack) — UI + API
+- **Tailwind CSS v4** — עיצוב Dark Glassmorphism
+- **Framer Motion** — מעברי שלבים, swipe cards, flip cards, level-up
+- **@hello-pangea/dnd** — מיון ב-Drag & Drop
+- **Turso (libSQL)** — נתוני סשנים, התקדמות, תשובות
+- **Google Sheets API** — ייצוא תשובות לפי דרישה (Service Account, ללא OAuth)
+
+## הרצה מקומית
 
 ```bash
+cp .env.example .env.local
+# לבדיקה מקומית מהירה תוכלי להגדיר:
+#   TURSO_DATABASE_URL=file:./local.db
+#   TURSO_AUTH_TOKEN=
+#   ADMIN_KEY=test-1234
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+פתחי את http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## העלאה לאוויר
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+ראו [DEPLOY.md](./DEPLOY.md) — מדריך צעד-אחר-צעד ל-Turso + Vercel + Google Sheets.
 
-## Learn More
+## מבנה הקוד
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/
+│   ├── layout.tsx         (RTL, Heebo + Rubik, dark theme)
+│   ├── page.tsx           (Quest entry point)
+│   ├── globals.css        (theme tokens, glass utils, glow)
+│   ├── admin/             (לוח מורה — מוגן ב-ADMIN_KEY)
+│   └── api/
+│       ├── session/       (POST/GET/PATCH לסשן תלמיד)
+│       └── admin/
+│           ├── sessions/  (GET/DELETE)
+│           └── export/    (POST → Google Sheets)
+├── components/
+│   ├── Landing.tsx        (מסך פתיחה)
+│   ├── QuestApp.tsx       (router בין השלבים)
+│   ├── ProgressBar.tsx    (XP + שלבים)
+│   ├── LevelUp.tsx        (אנימציית סיום שלב)
+│   ├── Summary.tsx        (מסך 1200 XP בסוף)
+│   ├── stages/            (Stage1 / StageGeneric)
+│   └── activities/        (FlipCard, MultipleChoice, DragDrop, …)
+└── lib/
+    ├── questData.ts       ⭐ Single source of truth — כל 21 השאלות
+    ├── quest-context.tsx  (state + autosave)
+    ├── db.ts              (Turso client + schema)
+    ├── sheets.ts          (Google Sheets export logic)
+    └── admin-auth.ts      (constant-time key check)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## עריכת תוכן
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+כל המשימות, שאלות, תשובות נכונות וערכי XP יושבים בקובץ אחד:
+**[`src/lib/questData.ts`](./src/lib/questData.ts)**.
+ערכי, commit & push, Vercel מפיץ אוטומטית בתוך דקה. סשנים קיימים לא נמחקים.
 
-## Deploy on Vercel
+## גישה לאדמין
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`/admin` עם `ADMIN_KEY` שהוגדר ב-Vercel.
+שם תוכלי:
+- לראות את כל הסשנים (סה״כ, באמצע, סיימו)
+- לראות סטטיסטיקות (ממוצע XP, ממוצע השלמה)
+- לייצא הכל ל-Google Sheets בלחיצה
+- למחוק סשנים בודדים
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## רישיון
+
+פנימי. נבנה עבור ישיבת שחרית.

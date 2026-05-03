@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local libsql DB
+*.db
+*.db-journal
+
+# Skill plugin notes (not part of the project)
+AGENTS.md
+CLAUDE.md
